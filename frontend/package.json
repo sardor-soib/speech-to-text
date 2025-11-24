@@ -8,6 +8,9 @@
     "start": "python -m http.server 3000",
     "dev": "python -m http.server 3000"
   },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
   "keywords": [
     "speech-to-text",
     "openai",
