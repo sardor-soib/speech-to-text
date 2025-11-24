@@ -1,0 +1,21 @@
+{
+  "name": "speech-to-text-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for OpenAI Realtime API Speech to Text application",
+  "main": "index.html",
+  "scripts": {
+    "build": "vite build",
+    "start": "python -m http.server 3000",
+    "dev": "python -m http.server 3000"
+  },
+  "keywords": [
+    "speech-to-text",
+    "openai",
+    "realtime-api",
+    "websocket",
+    "voice-assistant"
+  ],
+  "author": "",
+  "license": "MIT"
+}
+
