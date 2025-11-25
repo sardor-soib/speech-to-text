@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech to Text - OpenAI Realtime</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎤</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎤 Speech to Text</h1>
+            <p class="subtitle">Voice assistant based on OpenAI Realtime API</p>
+        </header>
+
+        <main>
+            <div class="status-panel">
+                <div class="status-indicator" id="statusIndicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text" id="statusText">Disconnected</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <!-- Connect/Disconnect are handled automatically by the app; buttons removed -->
+            </div>
+
+            <div class="audio-controls">
+                <button id="recordBtn" class="btn btn-record" disabled>
+                    <span class="btn-icon">🎤</span>
+                    Start Recording
+                </button>
+            </div>
+
+            <div class="transcript-panel">
+                <h2>📝 Transcription</h2>
+                <div id="transcript" class="transcript-box">
+                    <p class="placeholder">Your speech transcription will appear here...</p>
+                </div>
+            </div>
+
+            <div class="response-panel">
+                <h2>💬 Assistant Response</h2>
+                <div id="response" class="response-box">
+                    <p class="placeholder">Assistant response will appear here...</p>
+                </div>
+            </div>
+
+            <div class="logs-panel">
+                <h3>📋 Event Log</h3>
+                <div id="logs" class="logs-box"></div>
+                <button id="clearLogsBtn" class="btn btn-small">Clear Log</button>
+            </div>
+        </main>
+
+        <footer>
+            <p>Powered by OpenAI Realtime API & FastAPI</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
