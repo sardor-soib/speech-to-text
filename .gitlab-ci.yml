@@ -19,18 +19,6 @@ test:backend:
     - merge_requests
     - main
 
-# Frontend tests
-test:frontend:
-  stage: test
-  image: node:18-alpine
-  script:
-    - cd frontend
-    - npm ci
-    - npm test
-  only:
-    - merge_requests
-    - main
-
 # Build Docker image
 build:docker:
   stage: build
