@@ -1,0 +1,7 @@
+---
+stages:
+- build
+- test
+- deploy
+include:
+- remote: https://gitlab.com/gitlab-org/incubation-engineering/five-minute-production/library/-/raw/main/gcp/cloud-run.gitlab-ci.yml
