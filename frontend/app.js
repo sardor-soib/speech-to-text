@@ -17,18 +17,30 @@ const clearLogsBtn = document.getElementById('clearLogsBtn');
 // WebSocket URL - change to your server address
 const WS_URL = 'ws://localhost:8000/realtime';
 
+// Debug mode
+const DEBUG = true;
+
 // Event listeners
 recordBtn.addEventListener('click', toggleRecording);
 clearLogsBtn.addEventListener('click', clearLogs);
 
+// Debug logging helper
+function debugLog(message, data = null) {
+    if (DEBUG) {
+        console.log(`[DEBUG] ${message}`, data || '');
+    }
+}
+
 // Connect to WebSocket
 async function connectWebSocket() {
     try {
+        debugLog('Attempting to connect to WebSocket', WS_URL);
         addLog('Connecting to server...', 'info');
 
         ws = new WebSocket(WS_URL);
 
         ws.onopen = () => {
+            debugLog('WebSocket connection opened successfully');
             addLog('Connected to server', 'success');
             updateStatus('connected', 'Connected');
             // auto-managed UI: enable recording when connected
@@ -39,26 +51,56 @@ async function connectWebSocket() {
         };
 
         ws.onmessage = async (event) => {
+            debugLog('Received WebSocket message', event.data);
             try {
                 const data = JSON.parse(event.data);
+                debugLog('Parsed message data', data);
                 handleServerMessage(data);
             } catch (e) {
-                addLog(`Received message: ${event.data.substring(0, 100)}...`, 'info');
+                // If we can't parse as JSON, log the raw message
+                debugLog('Failed to parse message as JSON', e);
+                addLog(`Received non-JSON message: ${event.data.substring(0, 100)}...`, 'warning');
+                console.log('Raw message:', event.data);
             }
         };
 
         ws.onerror = (error) => {
-            addLog(`WebSocket error: ${error.message || 'Unknown error'}`, 'error');
+            // WebSocket error events don't contain detailed error information
+            // The actual error will be logged when onclose is called
+            debugLog('WebSocket error occurred', error);
+            console.error('WebSocket error event:', error);
+            addLog('WebSocket connection error occurred', 'error');
         };
 
-        ws.onclose = () => {
-            addLog('Disconnected from server', 'warning');
+        ws.onclose = (event) => {
+            const reason = event.reason || 'No reason provided';
+            const code = event.code;
+            const wasClean = event.wasClean;
+
+            debugLog('WebSocket connection closed', { code, reason, wasClean });
+
+            let logMessage = `Disconnected from server (Code: ${code}`;
+            if (reason) {
+                logMessage += `, Reason: ${reason}`;
+            }
+            if (!wasClean) {
+                logMessage += ', Connection was not closed cleanly';
+            }
+            logMessage += ')';
+
+            addLog(logMessage, wasClean ? 'warning' : 'error');
             updateStatus('disconnected', 'Disconnected');
             recordBtn.disabled = true;
 
             if (isRecording) {
                 stopRecording();
             }
+
+            // Optionally attempt to reconnect after a delay
+            // setTimeout(() => {
+            //     addLog('Attempting to reconnect...', 'info');
+            //     connectWebSocket();
+            // }, 3000);
         };
 
     } catch (error) {
@@ -97,14 +139,21 @@ function sendSessionConfig() {
         }
     };
 
+    debugLog('Sending session configuration', config);
     sendToServer(config);
 }
 
 // Handle messages from server
 function handleServerMessage(data) {
+    debugLog(`Handling server message: ${data.type}`, data);
     addLog(`Event: ${data.type}`, 'info');
 
     switch (data.type) {
+        case 'error':
+            const errorMsg = data.error?.message || JSON.stringify(data.error) || 'Unknown error';
+            addLog(`Server error: ${errorMsg}`, 'error');
+            break;
+
         case 'session.created':
             addLog('Session created', 'success');
             break;
@@ -139,8 +188,9 @@ function handleServerMessage(data) {
             addLog('Response received completely', 'success');
             break;
 
-        case 'error':
-            addLog(`Server error: ${data.error?.message || 'Unknown error'}`, 'error');
+        default:
+            // Log other event types for debugging
+            addLog(`Unhandled event type: ${data.type}`, 'info');
             break;
     }
 }
@@ -157,23 +207,30 @@ async function toggleRecording() {
 // Start recording audio
 async function startRecording() {
     try {
+        debugLog('Initiating audio recording...');
         addLog('Starting audio recording...', 'info');
 
         // Get microphone access
+        debugLog('Requesting microphone access...');
         mediaStream = await navigator.mediaDevices.getUserMedia({
             audio: {
                 channelCount: 1,
                 sampleRate: 24000
             }
         });
+        debugLog('Microphone access granted');
 
         // Create audio context
+        debugLog('Creating audio context...');
         audioContext = new AudioContext({ sampleRate: 24000 });
         const source = audioContext.createMediaStreamSource(mediaStream);
+        debugLog('Audio context created', { sampleRate: audioContext.sampleRate });
 
         // Create audio processor
+        debugLog('Adding audio worklet module...');
         await audioContext.audioWorklet.addModule(createAudioWorkletCode());
         audioWorkletNode = new AudioWorkletNode(audioContext, 'audio-processor');
+        debugLog('Audio worklet node created');
 
         audioWorkletNode.port.onmessage = (event) => {
             if (ws && ws.readyState === WebSocket.OPEN) {
@@ -181,6 +238,7 @@ async function startRecording() {
                     type: 'input_audio_buffer.append',
                     audio: arrayBufferToBase64(event.data)
                 };
+                debugLog('Sending audio chunk', { size: event.data.byteLength });
                 sendToServer(audioData);
             }
         };
@@ -201,19 +259,23 @@ async function startRecording() {
 
 // Stop recording audio
 function stopRecording() {
+    debugLog('Stopping recording...');
     if (mediaStream) {
         mediaStream.getTracks().forEach(track => track.stop());
         mediaStream = null;
+        debugLog('Media stream stopped');
     }
 
     if (audioWorkletNode) {
         audioWorkletNode.disconnect();
         audioWorkletNode = null;
+        debugLog('Audio worklet disconnected');
     }
 
     if (audioContext) {
         audioContext.close();
         audioContext = null;
+        debugLog('Audio context closed');
     }
 
     isRecording = false;
@@ -260,7 +322,10 @@ function arrayBufferToBase64(buffer) {
 // Send data to server
 function sendToServer(data) {
     if (ws && ws.readyState === WebSocket.OPEN) {
+        debugLog('Sending data to server', { type: data.type });
         ws.send(JSON.stringify(data));
+    } else {
+        debugLog('Cannot send data - WebSocket not ready', { readyState: ws?.readyState });
     }
 }
 

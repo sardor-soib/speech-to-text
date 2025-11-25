@@ -6,10 +6,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routers.ws import router as ws_router
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
@@ -36,7 +32,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(ws_router)
+app.include_router(ws_router, tags=["websocket"])
 
 @app.get("/")
 async def root():

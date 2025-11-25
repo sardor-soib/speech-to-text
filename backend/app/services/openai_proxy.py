@@ -11,16 +11,19 @@ from ..config import OPENAI_API_KEY, OPENAI_REALTIME_URL
 logger = logging.getLogger(__name__)
 
 async def proxy_websocket(client_ws):
-    # Read API key dynamically so process sees system env vars set after import
-    api_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENAPI_KEY") or OPENAI_API_KEY
+    # Read API key from system environment variables first, then fall back to config
+    api_key = os.getenv("OPENAI_API_KEY") or OPENAI_API_KEY
+
     if not api_key:
-        logger.error("OPENAI_API_KEY is not set (checked OPENAI_API_KEY and OPENAPI_KEY)")
+        logger.error("OPENAI_API_KEY is not set in system environment or .env file")
         try:
-            await client_ws.send_json({"error": "Server configuration error: API key not set"})
-            await client_ws.close()
+            await client_ws.send_json({"type": "error", "error": {"message": "Server configuration error: API key not set"}})
+            await client_ws.close(code=1008, reason="API key not configured")
         except Exception:
             pass
         return
+
+    logger.info(f"Using API key: {api_key[:10]}...{api_key[-4:]}")  # Log partial key for debugging
 
     try:
         logger.info(f"Connecting to OpenAI Realtime API: {OPENAI_REALTIME_URL}")
@@ -58,11 +61,11 @@ async def proxy_websocket(client_ws):
                         if msg_type == "websocket.receive":
                             if 'text' in msg and msg['text'] is not None:
                                 text = msg['text']
-                                logger.debug(f"Client -> OpenAI (text): {text[:100]}...")
+                                logger.info(f"Client -> OpenAI (text): {text[:100]}...")
                                 await openai_ws.send(text)
                             elif 'bytes' in msg and msg['bytes'] is not None:
                                 data_bytes = msg['bytes']
-                                logger.debug(f"Client -> OpenAI (bytes): {len(data_bytes)} bytes")
+                                logger.info(f"Client -> OpenAI (bytes): {len(data_bytes)} bytes")
                                 await openai_ws.send(data_bytes)
                         elif msg_type == 'websocket.disconnect':
                             logger.info("Client requested disconnect")
@@ -77,11 +80,11 @@ async def proxy_websocket(client_ws):
                     async for message in openai_ws:
                         # websockets yields str for text frames and bytes for binary frames
                         if isinstance(message, (bytes, bytearray)):
-                            logger.debug(f"OpenAI -> Client (bytes): {len(message)} bytes")
+                            logger.info(f"OpenAI -> Client (bytes): {len(message)} bytes")
                             await client_ws.send_bytes(message)
                         else:
                             # message is str (text)
-                            logger.debug(f"OpenAI -> Client (text): {str(message)[:100]}...")
+                            logger.info(f"OpenAI -> Client (text): {str(message)[:100]}...")
                             await client_ws.send_text(message)
                 except Exception as e:
                     logger.exception(f"Error forwarding OpenAI to client: {e}")
@@ -96,21 +99,24 @@ async def proxy_websocket(client_ws):
         error_msg = "Connection to OpenAI timed out. Please check your internet connection and API key."
         logger.error(error_msg)
         try:
-            await client_ws.send_json({"error": error_msg})
+            await client_ws.send_json({"type": "error", "error": {"message": error_msg}})
+            await client_ws.close(code=1008, reason="OpenAI connection timeout")
         except Exception:
             pass
     except WebSocketException as e:
         error_msg = f"WebSocket error: {str(e)}"
         logger.error(f"{error_msg} - Check your API key and Realtime API access")
         try:
-            await client_ws.send_json({"error": error_msg})
+            await client_ws.send_json({"type": "error", "error": {"message": error_msg}})
+            await client_ws.close(code=1011, reason=f"OpenAI WebSocket error")
         except Exception:
             pass
     except Exception as e:
         error_msg = f"Unexpected error: {str(e)}"
         logger.exception(error_msg)
         try:
-            await client_ws.send_json({"error": error_msg})
+            await client_ws.send_json({"type": "error", "error": {"message": error_msg}})
+            await client_ws.close(code=1011, reason="Internal server error")
         except Exception:
             pass
     finally:
