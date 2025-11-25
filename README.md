@@ -19,6 +19,7 @@ pip install -r requirements.txt
 
 # Create .env file with your API key
 echo "OPENAI_API_KEY=your_api_key_here" > .env
+# Or set system environment variable
 
 # Start server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -36,7 +37,6 @@ python -m http.server 3000
 ### 3. Use the App
 
 1. Open http://localhost:3000 in your browser
-2. Click **"Connect"** button
 3. Allow microphone access when prompted
 4. Click **"Start Recording"** and speak
 5. Watch real-time transcription and AI responses
@@ -57,15 +57,6 @@ Your Voice → Browser → WebSocket → Backend → OpenAI API → AI Response
 cd backend
 pytest tests/ -v
 ```
-
-## Troubleshooting
-
-| Problem          | Solution                                       |
-|------------------|------------------------------------------------|
-| Can't connect    | Check backend is running on port 8000          |
-| No microphone    | Allow browser permissions, use HTTPS/localhost |
-| OpenAI errors    | Verify API key in `.env` file                  |
-| No transcription | Speak louder, check microphone volume          |
 
 ## Configuration
 
@@ -95,9 +86,4 @@ speech-to-text/
 **Backend**: FastAPI, WebSockets, Python-dotenv  
 **Frontend**: Vanilla JavaScript, Web Audio API  
 **API**: OpenAI Realtime API (GPT-4)
-
-## Documentation
-
-- Full documentation: `USAGE.md`
-- API docs: http://localhost:8000/docs (when running)
 
