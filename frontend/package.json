@@ -1,6 +1,7 @@
 {
   "name": "speech-to-text-frontend",
   "version": "1.0.0",
+  "type": "module",
   "description": "Frontend for OpenAI Realtime API Speech to Text application",
   "main": "index.html",
   "scripts": {
