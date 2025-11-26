@@ -6,7 +6,7 @@ from websockets.exceptions import WebSocketException
 from fastapi import WebSocketDisconnect
 from typing import Any, Dict
 import os
-from ..config import OPENAI_API_KEY, OPENAI_REALTIME_URL
+from ..config import OPENAI_API_KEY, OPENAI_REALTIME_URL, OPENAI_REALTIME_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ async def proxy_websocket(client_ws):
     logger.info(f"Using API key: {api_key[:10]}...{api_key[-4:]}")  # Log partial key for debugging
 
     try:
-        logger.info(f"Connecting to OpenAI Realtime API: {OPENAI_REALTIME_URL}")
+        logger.info(f"Connecting to OpenAI Realtime API: {OPENAI_REALTIME_URL} (model={OPENAI_REALTIME_MODEL})")
 
         # Build headers as a list of (name, value) tuples which is widely supported
         headers = [("Authorization", f"Bearer {api_key}"), ("OpenAI-Beta", "realtime=v1")]
@@ -105,9 +105,9 @@ async def proxy_websocket(client_ws):
             pass
     except WebSocketException as e:
         error_msg = f"WebSocket error: {str(e)}"
-        logger.error(f"{error_msg} - Check your API key and Realtime API access")
+        logger.error(f"{error_msg} - Check your API key and Realtime API access (model={OPENAI_REALTIME_MODEL})")
         try:
-            await client_ws.send_json({"type": "error", "error": {"message": error_msg}})
+            await client_ws.send_json({"type": "error", "error": {"message": f"{error_msg}. Verify model '{OPENAI_REALTIME_MODEL}' exists and your key has access."}})
             await client_ws.close(code=1011, reason=f"OpenAI WebSocket error")
         except Exception:
             pass

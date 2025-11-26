@@ -1,315 +1,262 @@
-// WebSocket connection
 let ws = null;
 let audioContext = null;
 let mediaStream = null;
 let audioWorkletNode = null;
 let isRecording = false;
 
-// DOM elements
-const recordBtn = document.getElementById('recordBtn');
-const statusIndicator = document.getElementById('statusIndicator');
-const statusText = document.getElementById('statusText');
-const transcriptBox = document.getElementById('transcript');
-const responseBox = document.getElementById('response');
-const logsBox = document.getElementById('logs');
-const clearLogsBtn = document.getElementById('clearLogsBtn');
+const $ = (id) => document.getElementById(id);
+const recordBtn = $('recordBtn');
+const statusIndicator = $('statusIndicator');
+const statusText = $('statusText');
+const transcriptBox = $('transcript');
+const responseBox = $('response');
+const logsBox = $('logs');
 
-// WebSocket URL - change to your server address
 const WS_URL = 'ws://localhost:8000/realtime';
 
-// Debug mode
-const DEBUG = true;
-
-// Event listeners
 recordBtn.addEventListener('click', toggleRecording);
-clearLogsBtn.addEventListener('click', clearLogs);
+$('clearLogsBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    logsBox.innerHTML = '';
+});
 
-// Debug logging helper
-function debugLog(message, data = null) {
-    if (DEBUG) {
-        console.log(`[DEBUG] ${message}`, data || '');
-    }
-}
-
-// Connect to WebSocket
 async function connectWebSocket() {
     try {
-        debugLog('Attempting to connect to WebSocket', WS_URL);
         addLog('Connecting to server...', 'info');
-
         ws = new WebSocket(WS_URL);
+        ws.binaryType = 'arraybuffer';
 
         ws.onopen = () => {
-            debugLog('WebSocket connection opened successfully');
             addLog('Connected to server', 'success');
             updateStatus('connected', 'Connected');
-            // auto-managed UI: enable recording when connected
             recordBtn.disabled = false;
-
-            // Send initial session configuration
-            sendSessionConfig();
+            sendToServer({
+                type: 'session.update',
+                session: {
+                    modalities: ['text', 'audio'],
+                    instructions: 'You are a helpful voice assistant. Answer briefly and clearly.',
+                    voice: 'alloy',
+                    input_audio_format: 'pcm16',
+                    output_audio_format: 'pcm16',
+                    input_audio_transcription: { model: 'whisper-1' },
+                    turn_detection: {
+                        type: 'server_vad',
+                        threshold: 0.5,
+                        prefix_padding_ms: 300,
+                        silence_duration_ms: 500
+                    }
+                }
+            });
         };
 
         ws.onmessage = async (event) => {
-            debugLog('Received WebSocket message', event.data);
-            try {
-                const data = JSON.parse(event.data);
-                debugLog('Parsed message data', data);
-                handleServerMessage(data);
-            } catch (e) {
-                // If we can't parse as JSON, log the raw message
-                debugLog('Failed to parse message as JSON', e);
-                addLog(`Received non-JSON message: ${event.data.substring(0, 100)}...`, 'warning');
-                console.log('Raw message:', event.data);
+            if (typeof event.data === 'string') {
+                try {
+                    handleServerMessage(JSON.parse(event.data));
+                } catch (e) {
+                    addLog(`Failed to process message: ${e.message}`, 'warning');
+                }
             }
         };
 
         ws.onerror = (error) => {
-            // WebSocket error events don't contain detailed error information
-            // The actual error will be logged when onclose is called
-            debugLog('WebSocket error occurred', error);
-            console.error('WebSocket error event:', error);
-            addLog('WebSocket connection error occurred', 'error');
+            console.error('WebSocket error:', error);
+            addLog(`WebSocket error: ${error.message || 'Unknown error'}`, 'error');
         };
 
         ws.onclose = (event) => {
-            const reason = event.reason || 'No reason provided';
-            const code = event.code;
-            const wasClean = event.wasClean;
-
-            debugLog('WebSocket connection closed', { code, reason, wasClean });
-
-            let logMessage = `Disconnected from server (Code: ${code}`;
-            if (reason) {
-                logMessage += `, Reason: ${reason}`;
-            }
-            if (!wasClean) {
-                logMessage += ', Connection was not closed cleanly';
-            }
-            logMessage += ')';
-
-            addLog(logMessage, wasClean ? 'warning' : 'error');
+            addLog(`Disconnected (Code: ${event.code})`, event.wasClean ? 'warning' : 'error');
             updateStatus('disconnected', 'Disconnected');
             recordBtn.disabled = true;
-
-            if (isRecording) {
-                stopRecording();
-            }
-
-            // Optionally attempt to reconnect after a delay
-            // setTimeout(() => {
-            //     addLog('Attempting to reconnect...', 'info');
-            //     connectWebSocket();
-            // }, 3000);
+            if (isRecording) stopRecording();
         };
-
     } catch (error) {
         addLog(`Connection error: ${error.message}`, 'error');
     }
 }
 
-// Disconnect from WebSocket
-function disconnectWebSocket() {
-    if (ws) {
-        ws.close();
-        ws = null;
-    }
-
-    if (isRecording) {
-        stopRecording();
-    }
-}
-
-// Send session configuration to OpenAI
-function sendSessionConfig() {
-    const config = {
-        type: 'session.update',
-        session: {
-            modalities: ['text', 'audio'],
-            instructions: 'You are a helpful voice assistant. Answer briefly and clearly.',
-            voice: 'alloy',
-            input_audio_format: 'pcm16',
-            output_audio_format: 'pcm16',
-            turn_detection: {
-                type: 'server_vad',
-                threshold: 0.5,
-                prefix_padding_ms: 300,
-                silence_duration_ms: 500
-            }
-        }
-    };
-
-    debugLog('Sending session configuration', config);
-    sendToServer(config);
-}
-
-// Handle messages from server
 function handleServerMessage(data) {
-    debugLog(`Handling server message: ${data.type}`, data);
     addLog(`Event: ${data.type}`, 'info');
 
-    switch (data.type) {
-        case 'error':
-            const errorMsg = data.error?.message || JSON.stringify(data.error) || 'Unknown error';
-            addLog(`Server error: ${errorMsg}`, 'error');
-            break;
+    if (data.type === 'error') {
+        addLog(`Server error: ${data.error?.message || 'Unknown error'}`, 'error');
+        return;
+    }
 
-        case 'session.created':
-            addLog('Session created', 'success');
-            break;
+    if (data.type === 'session.created' || data.type === 'session.updated') {
+        addLog(data.type === 'session.created' ? 'Session created' : 'Session updated', 'success');
+        return;
+    }
 
-        case 'session.updated':
-            addLog('Session updated', 'success');
-            break;
+    // User speech transcription
+    if (data.type === 'conversation.item.created' && data.item?.role === 'user') {
+        data.item.content?.forEach(c => {
+            const text = c.transcript || c.text;
+            if (text) appendToBox(transcriptBox, text);
+        });
+        return;
+    }
 
-        case 'conversation.item.created':
-            if (data.item?.content) {
-                addLog('Conversation item created', 'info');
-            }
-            break;
+    // User input audio transcription deltas
+    if (data.type === 'conversation.item.input_audio_transcription.completed' ||
+        data.type === 'conversation.item.input_audio_transcription.delta') {
+        const chunk = data.transcript || data.delta;
+        if (chunk) appendToBox(transcriptBox, chunk);
+        return;
+    }
 
-        case 'response.audio_transcript.delta':
-            if (data.delta) {
-                appendToTranscript(data.delta);
-            }
-            break;
+    // AI response text/transcript deltas
+    if (data.type === 'response.audio_transcript.delta' ||
+        data.type === 'response.transcript.delta' ||
+        data.type === 'response.text.delta' ||
+        data.type === 'response.delta' ||
+        data.type === 'response.output_text.delta') {
+        const chunk = data.delta || data.transcript || data.text;
+        if (chunk) appendToBox(responseBox, chunk);
+        return;
+    }
 
-        case 'response.audio.delta':
-            // Handle audio response if needed
-            break;
+    // AI response final text
+    if (data.type === 'response.output_text.done' && data.text) {
+        appendToBox(responseBox, data.text);
+        return;
+    }
 
-        case 'response.text.delta':
-            if (data.delta) {
-                appendToResponse(data.delta);
-            }
-            break;
-
-        case 'response.done':
-            addLog('Response received completely', 'success');
-            break;
-
-        default:
-            // Log other event types for debugging
-            addLog(`Unhandled event type: ${data.type}`, 'info');
-            break;
+    if (data.type === 'response.done') {
+        if (data.response?.status === 'failed') {
+            const errMsg = data.response.status_details?.error?.message || 'Response failed';
+            addLog(`Assistant failed: ${errMsg}`, 'error');
+            appendToBox(responseBox, `[Error] ${errMsg}`);
+        }
+        addLog('Response received', 'success');
     }
 }
 
-// Toggle recording
 async function toggleRecording() {
-    if (isRecording) {
-        stopRecording();
-    } else {
-        await startRecording();
-    }
+    isRecording ? stopRecording() : await startRecording();
 }
 
-// Start recording audio
 async function startRecording() {
     try {
-        debugLog('Initiating audio recording...');
         addLog('Starting audio recording...', 'info');
 
-        // Get microphone access
-        debugLog('Requesting microphone access...');
+        if (audioContext) {
+            await audioContext.close().catch(() => {});
+        }
+
         mediaStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-                channelCount: 1,
-                sampleRate: 24000
-            }
+            audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
         });
-        debugLog('Microphone access granted');
 
-        // Create audio context
-        debugLog('Creating audio context...');
-        audioContext = new AudioContext({ sampleRate: 24000 });
+        const track = mediaStream.getAudioTracks()[0];
+        const micSampleRate = track.getSettings().sampleRate || 48000;
+
+        audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: micSampleRate });
         const source = audioContext.createMediaStreamSource(mediaStream);
-        debugLog('Audio context created', { sampleRate: audioContext.sampleRate });
 
-        // Create audio processor
-        debugLog('Adding audio worklet module...');
         await audioContext.audioWorklet.addModule(createAudioWorkletCode());
-        audioWorkletNode = new AudioWorkletNode(audioContext, 'audio-processor');
-        debugLog('Audio worklet node created');
+        audioWorkletNode = new AudioWorkletNode(audioContext, 'audio-processor', {
+            processorOptions: { inputSampleRate: micSampleRate, targetSampleRate: 24000 }
+        });
 
         audioWorkletNode.port.onmessage = (event) => {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                const audioData = {
+            if (isRecording && ws?.readyState === WebSocket.OPEN) {
+                sendToServer({
                     type: 'input_audio_buffer.append',
                     audio: arrayBufferToBase64(event.data)
-                };
-                debugLog('Sending audio chunk', { size: event.data.byteLength });
-                sendToServer(audioData);
+                });
             }
         };
 
-        source.connect(audioWorkletNode);
-        audioWorkletNode.connect(audioContext.destination);
+        const silenceGain = audioContext.createGain();
+        silenceGain.gain.value = 0;
+        source.connect(audioWorkletNode).connect(silenceGain).connect(audioContext.destination);
 
         isRecording = true;
-        recordBtn.textContent = '⏹ Stop Recording';
         recordBtn.classList.add('recording');
+        recordBtn.querySelector('.record-text').textContent = 'Stop Recording';
         updateStatus('recording', 'Recording...');
         addLog('Recording started', 'success');
-
     } catch (error) {
         addLog(`Error starting recording: ${error.message}`, 'error');
+        console.error('Recording error:', error);
     }
 }
 
-// Stop recording audio
 function stopRecording() {
-    debugLog('Stopping recording...');
-    if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-        mediaStream = null;
-        debugLog('Media stream stopped');
-    }
-
-    if (audioWorkletNode) {
-        audioWorkletNode.disconnect();
-        audioWorkletNode = null;
-        debugLog('Audio worklet disconnected');
-    }
-
-    if (audioContext) {
-        audioContext.close();
-        audioContext = null;
-        debugLog('Audio context closed');
-    }
-
     isRecording = false;
-    recordBtn.textContent = '🎤 Start Recording';
+
+    if (audioWorkletNode?.port) audioWorkletNode.port.onmessage = null;
+    mediaStream?.getTracks().forEach(track => track.stop());
+    audioWorkletNode?.disconnect();
+    audioContext?.close();
+
+    mediaStream = audioWorkletNode = audioContext = null;
+
+    if (ws?.readyState === WebSocket.OPEN) {
+        sendToServer({ type: 'input_audio_buffer.commit' });
+        sendToServer({ type: 'response.create', response: { modalities: ['text'] } });
+    }
+
     recordBtn.classList.remove('recording');
+    recordBtn.querySelector('.record-text').textContent = 'Start Recording';
     updateStatus('connected', 'Connected');
     addLog('Recording stopped', 'info');
 }
 
-// Create AudioWorklet processor code
 function createAudioWorkletCode() {
-    const processorCode = `
+    const code = `
         class AudioProcessor extends AudioWorkletProcessor {
-            process(inputs, outputs, parameters) {
-                const input = inputs[0];
-                if (input.length > 0) {
-                    const audioData = input[0];
-                    const int16Data = new Int16Array(audioData.length);
-                    for (let i = 0; i < audioData.length; i++) {
-                        int16Data[i] = Math.max(-32768, Math.min(32767, audioData[i] * 32768));
+            constructor(options) {
+                super();
+                const opts = options.processorOptions || {};
+                this.inputSampleRate = opts.inputSampleRate || sampleRate;
+                this.targetSampleRate = opts.targetSampleRate || 24000;
+            }
+
+            resample(floatInput) {
+                const inRate = this.inputSampleRate;
+                const outRate = this.targetSampleRate;
+
+                if (inRate === outRate) {
+                    const int16 = new Int16Array(floatInput.length);
+                    for (let i = 0; i < floatInput.length; i++) {
+                        int16[i] = Math.max(-1, Math.min(1, floatInput[i])) * 32767 | 0;
                     }
-                    this.port.postMessage(int16Data.buffer);
+                    return int16;
+                }
+
+                const ratio = inRate / outRate;
+                const outLen = Math.floor(floatInput.length / ratio);
+                const int16 = new Int16Array(outLen);
+
+                for (let i = 0; i < outLen; i++) {
+                    const src = i * ratio;
+                    const src0 = Math.floor(src);
+                    const src1 = Math.min(floatInput.length - 1, src0 + 1);
+                    const frac = src - src0;
+                    const s0 = floatInput[src0] || 0;
+                    const s1 = floatInput[src1] || 0;
+                    const sample = s0 + (s1 - s0) * frac;
+                    int16[i] = Math.max(-1, Math.min(1, sample)) * 32767 | 0;
+                }
+                return int16;
+            }
+
+            process(inputs) {
+                const input = inputs[0]?.[0];
+                if (input?.length) {
+                    const int16 = this.resample(input);
+                    this.port.postMessage(int16.buffer, [int16.buffer]);
                 }
                 return true;
             }
         }
         registerProcessor('audio-processor', AudioProcessor);
     `;
-
-    const blob = new Blob([processorCode], { type: 'application/javascript' });
-    return URL.createObjectURL(blob);
+    return URL.createObjectURL(new Blob([code], { type: 'application/javascript' }));
 }
 
-// Convert ArrayBuffer to Base64
 function arrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
     let binary = '';
@@ -319,59 +266,30 @@ function arrayBufferToBase64(buffer) {
     return btoa(binary);
 }
 
-// Send data to server
 function sendToServer(data) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        debugLog('Sending data to server', { type: data.type });
+    if (ws?.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(data));
-    } else {
-        debugLog('Cannot send data - WebSocket not ready', { readyState: ws?.readyState });
     }
 }
 
-// Update status indicator
 function updateStatus(status, text) {
     statusText.textContent = text;
-    statusIndicator.className = 'status-indicator ' + status;
+    statusIndicator.className = 'status-badge ' + status;
 }
 
-// Append to transcript
-function appendToTranscript(text) {
-    if (transcriptBox.querySelector('.placeholder')) {
-        transcriptBox.innerHTML = '';
-    }
-    transcriptBox.textContent += text;
-    transcriptBox.scrollTop = transcriptBox.scrollHeight;
+function appendToBox(box, text) {
+    if (box.querySelector('.placeholder')) box.innerHTML = '';
+    box.textContent += text;
+    box.scrollTop = box.scrollHeight;
 }
 
-// Append to response
-function appendToResponse(text) {
-    if (responseBox.querySelector('.placeholder')) {
-        responseBox.innerHTML = '';
-    }
-    responseBox.textContent += text;
-    responseBox.scrollTop = responseBox.scrollHeight;
-}
-
-// Add log entry
 function addLog(message, type = 'info') {
-    const time = new Date().toLocaleTimeString('en-US');
     const logEntry = document.createElement('div');
     logEntry.className = `log-entry log-${type}`;
-    logEntry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
+    logEntry.innerHTML = `<span class="log-time">[${new Date().toLocaleTimeString()}]</span> ${message}`;
     logsBox.appendChild(logEntry);
     logsBox.scrollTop = logsBox.scrollHeight;
 }
 
-// Clear logs
-function clearLogs() {
-    logsBox.innerHTML = '';
-}
-
-// Initialize
 addLog('Application loaded', 'success');
-
-// Auto-connect on load
-window.addEventListener('load', () => {
-    connectWebSocket();
-});
+window.addEventListener('load', connectWebSocket);
