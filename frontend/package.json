@@ -9,7 +9,7 @@
     "dev": "python -m http.server 3000"
   },
   "devDependencies": {
-    "vite": "^5.0.0"
+    "vite": "^7.2.4"
   },
   "keywords": [
     "speech-to-text",
@@ -20,4 +20,3 @@
   ],
   "author": "sardorsoib"
 }
-
