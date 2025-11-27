@@ -4,7 +4,8 @@ stages:
   - deploy
 
 variables:
-  IMAGE_TAG: gcr.io/$GCP_PROJECT_ID/speech-to-text:$CI_COMMIT_SHORT_SHA
+  IMAGE_TAG_BACKEND: gcr.io/$GCP_PROJECT_ID/speech-to-text-backend:$CI_COMMIT_SHORT_SHA
+  IMAGE_TAG_FRONTEND: gcr.io/$GCP_PROJECT_ID/speech-to-text-frontend:$CI_COMMIT_SHORT_SHA
 
 # Backend tests
 test:backend:
@@ -19,21 +20,36 @@ test:backend:
     - merge_requests
     - main
 
-# Build Docker image
-build:docker:
+# Build Backend Docker image
+build:backend:
   stage: build
   image: docker:24
   services:
     - docker:24-dind
   script:
-    - docker build -t $IMAGE_TAG .
+    - cd backend
+    - docker build -t $IMAGE_TAG_BACKEND .
     - echo $GCP_SERVICE_KEY | docker login -u _json_key --password-stdin https://gcr.io
-    - docker push $IMAGE_TAG
+    - docker push $IMAGE_TAG_BACKEND
   only:
     - main
 
-# Deploy to Google Cloud Run
-deploy:production:
+# Build Frontend Docker image
+build:frontend:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  script:
+    - cd frontend
+    - docker build -t $IMAGE_TAG_FRONTEND .
+    - echo $GCP_SERVICE_KEY | docker login -u _json_key --password-stdin https://gcr.io
+    - docker push $IMAGE_TAG_FRONTEND
+  only:
+    - main
+
+# Deploy Backend to Google Cloud Run
+deploy:backend:
   stage: deploy
   image: google/cloud-sdk:alpine
   script:
@@ -41,14 +57,34 @@ deploy:production:
     - gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json
     - gcloud config set project $GCP_PROJECT_ID
     - |
-      gcloud run deploy speech-to-text \
-        --image $IMAGE_TAG \
+      gcloud run deploy speech-to-text-backend \
+        --image $IMAGE_TAG_BACKEND \
         --platform managed \
         --region us-central1 \
         --allow-unauthenticated \
         --set-env-vars OPENAI_API_KEY=$OPENAI_API_KEY
   environment:
     name: production
-    url: https://speech-to-text-xxx.run.app
+    url: https://speech-to-text-backend-xxx.run.app
+  only:
+    - main
+
+# Deploy Frontend to Google Cloud Run
+deploy:frontend:
+  stage: deploy
+  image: google/cloud-sdk:alpine
+  script:
+    - echo $GCP_SERVICE_KEY > ${HOME}/gcp-key.json
+    - gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json
+    - gcloud config set project $GCP_PROJECT_ID
+    - |
+      gcloud run deploy speech-to-text-frontend \
+        --image $IMAGE_TAG_FRONTEND \
+        --platform managed \
+        --region us-central1 \
+        --allow-unauthenticated
+  environment:
+    name: production
+    url: https://speech-to-text-frontend-xxx.run.app
   only:
     - main

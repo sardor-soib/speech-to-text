@@ -1,16 +1,18 @@
+import logging
+import os
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
-import os
-import logging
+
 from ..services.openai_proxy import proxy_websocket
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
 @router.websocket("/realtime")
 async def realtime_proxy(client_ws: WebSocket):
-
     try:
         await client_ws.accept()
         logger.info(f"WebSocket connection accepted from client")

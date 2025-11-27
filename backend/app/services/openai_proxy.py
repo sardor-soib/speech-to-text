@@ -1,14 +1,17 @@
 import asyncio
-import logging
 import inspect
-import websockets
-from websockets.exceptions import WebSocketException
-from fastapi import WebSocketDisconnect
-from typing import Any, Dict
+import logging
 import os
+from typing import Any, Dict
+
+import websockets
+from fastapi import WebSocketDisconnect
+from websockets.exceptions import WebSocketException
+
 from ..config import OPENAI_API_KEY, OPENAI_REALTIME_URL, OPENAI_REALTIME_MODEL
 
 logger = logging.getLogger(__name__)
+
 
 async def proxy_websocket(client_ws):
     # Read API key from system environment variables first, then fall back to config
@@ -17,7 +20,8 @@ async def proxy_websocket(client_ws):
     if not api_key:
         logger.error("OPENAI_API_KEY is not set in system environment or .env file")
         try:
-            await client_ws.send_json({"type": "error", "error": {"message": "Server configuration error: API key not set"}})
+            await client_ws.send_json(
+                {"type": "error", "error": {"message": "Server configuration error: API key not set"}})
             await client_ws.close(code=1008, reason="API key not configured")
         except Exception:
             pass
@@ -78,6 +82,10 @@ async def proxy_websocket(client_ws):
             async def forward_openai_to_client():
                 try:
                     async for message in openai_ws:
+                        if client_ws.application_state == "DISCONNECTED":
+                            logger.warning("Client WebSocket is disconnected. Stopping message forwarding.")
+                            break
+
                         # websockets yields str for text frames and bytes for binary frames
                         if isinstance(message, (bytes, bytearray)):
                             logger.info(f"OpenAI -> Client (bytes): {len(message)} bytes")
@@ -87,7 +95,10 @@ async def proxy_websocket(client_ws):
                             logger.info(f"OpenAI -> Client (text): {str(message)[:100]}...")
                             await client_ws.send_text(message)
                 except Exception as e:
-                    logger.exception(f"Error forwarding OpenAI to client: {e}")
+                    if client_ws.application_state != "DISCONNECTED":
+                        logger.exception(f"Error forwarding OpenAI to client: {e}")
+                    else:
+                        logger.info("Error occurred after client WebSocket was disconnected. Ignoring.")
 
             await asyncio.gather(
                 forward_client_to_openai(),
@@ -110,7 +121,8 @@ async def proxy_websocket(client_ws):
         error_msg = f"WebSocket error: {str(e)}"
         logger.error(f"{error_msg} - Check your API key and Realtime API access (model={OPENAI_REALTIME_MODEL})")
         try:
-            await client_ws.send_json({"type": "error", "error": {"message": f"{error_msg}. Verify model '{OPENAI_REALTIME_MODEL}' exists and your key has access."}})
+            await client_ws.send_json({"type": "error", "error": {
+                "message": f"{error_msg}. Verify model '{OPENAI_REALTIME_MODEL}' exists and your key has access."}})
         except Exception:
             pass
         try:

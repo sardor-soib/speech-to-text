@@ -4,7 +4,26 @@ Real-time voice assistant powered by OpenAI Realtime API. Speak into your microp
 
 ## Quick Start
 
-### Prerequisites
+### Option 1: Using Docker (Recommended)
+
+```bash
+# Set your OpenAI API key
+export OPENAI_API_KEY=your_api_key_here
+
+# Build and run with docker-compose
+docker-compose up
+
+# Or build and run manually
+docker build -t speech-to-text .
+docker run -p 8080:8080 -e OPENAI_API_KEY=$OPENAI_API_KEY speech-to-text
+```
+
+Then open http://localhost:8080 in your browser.
+
+### Option 2: Run Locally
+
+#### Prerequisites
+
 - Python 3.11+
 - OpenAI API key with Realtime API access
 - Modern web browser
@@ -22,7 +41,7 @@ echo "OPENAI_API_KEY=your_api_key_here" > .env
 # Or set system environment variable
 
 # Start server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
 ```
 
 ### 2. Start Frontend
@@ -34,10 +53,12 @@ cd frontend
 python -m http.server 3000
 ```
 
+Open http://localhost:3000 in your browser.
+
 ### 3. Use the App
 
-1. Open http://localhost:3000 in your browser
-3. Allow microphone access when prompted
+1. Open http://localhost:8080 (Docker) or http://localhost:3000 (local dev)
+2. Allow microphone access when prompted
 4. Click **"Start Recording"** and speak
 5. Watch real-time transcription and AI responses
 
@@ -61,6 +82,7 @@ pytest tests/ -v
 ## Configuration
 
 Edit `frontend/app.js` to change:
+
 - WebSocket URL (line 20)
 - AI voice (`alloy`, `echo`, `fable`, `onyx`, `nova`, `shimmer`)
 - AI instructions
