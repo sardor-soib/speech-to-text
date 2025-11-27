@@ -20,31 +20,27 @@ test:backend:
     - merge_requests
     - main
 
-# Build Backend Docker image
+# Build Backend Docker image using Google Cloud Build (non-interactive)
 build:backend:
   stage: build
-  image: docker:24
-  services:
-    - docker:24-dind
+  image: google/cloud-sdk:slim
   script:
-    - cd backend
-    - docker build -t $IMAGE_TAG_BACKEND .
-    - echo $GCP_SERVICE_KEY | docker login -u _json_key --password-stdin https://gcr.io
-    - docker push $IMAGE_TAG_BACKEND
+    - echo "$GCP_SERVICE_KEY" > ${HOME}/gcp-key.json
+    - gcloud auth activate-service-account --key-file=${HOME}/gcp-key.json
+    - gcloud config set project $GCP_PROJECT_ID
+    - gcloud builds submit --tag $IMAGE_TAG_BACKEND backend
   only:
     - main
 
-# Build Frontend Docker image
+# Build Frontend Docker image using Google Cloud Build (non-interactive)
 build:frontend:
   stage: build
-  image: docker:24
-  services:
-    - docker:24-dind
+  image: google/cloud-sdk:slim
   script:
-    - cd frontend
-    - docker build -t $IMAGE_TAG_FRONTEND .
-    - echo $GCP_SERVICE_KEY | docker login -u _json_key --password-stdin https://gcr.io
-    - docker push $IMAGE_TAG_FRONTEND
+    - echo "$GCP_SERVICE_KEY" > ${HOME}/gcp-key.json
+    - gcloud auth activate-service-account --key-file=${HOME}/gcp-key.json
+    - gcloud config set project $GCP_PROJECT_ID
+    - gcloud builds submit --tag $IMAGE_TAG_FRONTEND frontend
   only:
     - main
 
