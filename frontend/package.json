@@ -5,7 +5,9 @@
   "description": "Frontend for OpenAI Realtime API Speech to Text application",
   "main": "index.html",
   "scripts": {
+    "npm install": "npm ci",
     "build": "vite build",
+    "preview": "vite preview",
     "start": "python -m http.server 3000",
     "dev": "python -m http.server 3000"
   },

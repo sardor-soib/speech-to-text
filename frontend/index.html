@@ -2,91 +2,103 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Voice Assistant - OpenAI Realtime</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎤</text></svg>">
-    <link rel="stylesheet" href="styles.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎤</text></svg>"
+          rel="icon">
+    <link href="styles.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="app-container">
-        <div class="header-bar">
-            <div class="logo">
-                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M19 11C19 14.866 15.866 18 12 18C8.13401 18 5 14.866 5 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M12 18V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<div class="app-container">
+    <div class="header-bar">
+        <div class="logo">
+            <svg class="logo-icon" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14Z"
+                      stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                <path d="M19 11C19 14.866 15.866 18 12 18C8.13401 18 5 14.866 5 11" stroke="currentColor"
+                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                <path d="M12 18V22" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                      stroke-width="2"/>
+            </svg>
+            <span class="logo-text">Voice Assistant</span>
+        </div>
+        <div class="status-badge" id="statusIndicator">
+            <span class="status-dot"></span>
+            <span class="status-text" id="statusText">Connecting...</span>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <div class="record-section">
+            <button class="record-button" disabled id="recordBtn">
+                <svg class="record-icon" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="12" fill="currentColor" r="4"/>
                 </svg>
-                <span class="logo-text">Voice Assistant</span>
+                <span class="record-text">Start Recording</span>
+            </button>
+            <p class="record-hint">Click to start voice conversation</p>
+        </div>
+
+        <div class="content-grid">
+            <div class="card transcript-card">
+                <div class="card-header">
+                    <svg class="card-icon" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"
+                              stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                        <path d="M14 2V8H20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                              stroke-width="2"/>
+                        <path d="M16 13H8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                              stroke-width="2"/>
+                        <path d="M16 17H8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                              stroke-width="2"/>
+                        <path d="M10 9H9H8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                              stroke-width="2"/>
+                    </svg>
+                    <h2 class="card-title">Your Speech</h2>
+                </div>
+                <div class="card-content" id="transcript">
+                    <p class="placeholder">Your speech will be transcribed here...</p>
+                </div>
             </div>
-            <div class="status-badge" id="statusIndicator">
-                <span class="status-dot"></span>
-                <span class="status-text" id="statusText">Connecting...</span>
+
+            <div class="card response-card">
+                <div class="card-header">
+                    <svg class="card-icon" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z"
+                              stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                    </svg>
+                    <h2 class="card-title">AI Response</h2>
+                </div>
+                <div class="card-content" id="response">
+                    <p class="placeholder">Assistant will respond here...</p>
+                </div>
             </div>
         </div>
 
-        <main class="main-content">
-            <div class="record-section">
-                <button id="recordBtn" class="record-button" disabled>
-                    <svg class="record-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                        <circle cx="12" cy="12" r="4" fill="currentColor"/>
-                    </svg>
-                    <span class="record-text">Start Recording</span>
-                </button>
-                <p class="record-hint">Click to start voice conversation</p>
-            </div>
+        <details class="logs-section">
+            <summary class="logs-header">
+                <svg class="logs-icon" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 5H7C6.46957 5 5.96086 5.21071 5.58579 5.58579C5.21071 5.96086 5 6.46957 5 7V19C5 19.5304 5.21071 20.0391 5.58579 20.4142C5.96086 20.7893 6.46957 21 7 21H17C17.5304 21 18.0391 20.7893 18.4142 20.4142C18.7893 20.0391 19 19.5304 19 19V7C19 6.46957 18.7893 5.96086 18.4142 5.58579C18.0391 5.21071 17.5304 5 17 5H15"
+                          stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                    <rect height="4" rx="1" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" width="6"
+                          x="9" y="3"/>
+                </svg>
+                <span>Event Logs</span>
+                <button class="clear-logs-btn" id="clearLogsBtn" type="button">Clear</button>
+            </summary>
+            <div class="logs-content" id="logs"></div>
+        </details>
+    </main>
 
-            <div class="content-grid">
-                <div class="card transcript-card">
-                    <div class="card-header">
-                        <svg class="card-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M16 13H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M16 17H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M10 9H9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <h2 class="card-title">Your Speech</h2>
-                    </div>
-                    <div id="transcript" class="card-content">
-                        <p class="placeholder">Your speech will be transcribed here...</p>
-                    </div>
-                </div>
+    <footer class="app-footer">
+        <p>Powered by <strong>OpenAI Realtime API</strong></p>
+    </footer>
+</div>
 
-                <div class="card response-card">
-                    <div class="card-header">
-                        <svg class="card-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <h2 class="card-title">AI Response</h2>
-                    </div>
-                    <div id="response" class="card-content">
-                        <p class="placeholder">Assistant will respond here...</p>
-                    </div>
-                </div>
-            </div>
-
-            <details class="logs-section">
-                <summary class="logs-header">
-                    <svg class="logs-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M9 5H7C6.46957 5 5.96086 5.21071 5.58579 5.58579C5.21071 5.96086 5 6.46957 5 7V19C5 19.5304 5.21071 20.0391 5.58579 20.4142C5.96086 20.7893 6.46957 21 7 21H17C17.5304 21 18.0391 20.7893 18.4142 20.4142C18.7893 20.0391 19 19.5304 19 19V7C19 6.46957 18.7893 5.96086 18.4142 5.58579C18.0391 5.21071 17.5304 5 17 5H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span>Event Logs</span>
-                    <button id="clearLogsBtn" class="clear-logs-btn" type="button">Clear</button>
-                </summary>
-                <div id="logs" class="logs-content"></div>
-            </details>
-        </main>
-
-        <footer class="app-footer">
-            <p>Powered by <strong>OpenAI Realtime API</strong></p>
-        </footer>
-    </div>
-
-    <script src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>

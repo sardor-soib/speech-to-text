@@ -4,6 +4,8 @@ let mediaStream = null;
 let audioWorkletNode = null;
 let isRecording = false;
 
+const appendedTexts = new Set();
+
 const $ = (id) => document.getElementById(id);
 const recordBtn = $('recordBtn');
 const statusIndicator = $('statusIndicator');
@@ -12,7 +14,7 @@ const transcriptBox = $('transcript');
 const responseBox = $('response');
 const logsBox = $('logs');
 
-const WS_URL = 'ws://localhost:8000/realtime';
+const WS_URL = 'ws://localhost:8080/realtime';
 
 recordBtn.addEventListener('click', toggleRecording);
 $('clearLogsBtn').addEventListener('click', (e) => {
@@ -92,16 +94,19 @@ function handleServerMessage(data) {
     if (data.type === 'conversation.item.created' && data.item?.role === 'user') {
         data.item.content?.forEach(c => {
             const text = c.transcript || c.text;
-            if (text) appendToBox(transcriptBox, text);
+            if (text) {
+                appendToBox(transcriptBox, text, data.type);
+            }
         });
         return;
     }
 
-    // User input audio transcription deltas
     if (data.type === 'conversation.item.input_audio_transcription.completed' ||
         data.type === 'conversation.item.input_audio_transcription.delta') {
         const chunk = data.transcript || data.delta;
-        if (chunk) appendToBox(transcriptBox, chunk);
+        if (chunk) {
+            appendToBox(transcriptBox, chunk, data.type);
+        }
         return;
     }
 
@@ -112,13 +117,15 @@ function handleServerMessage(data) {
         data.type === 'response.delta' ||
         data.type === 'response.output_text.delta') {
         const chunk = data.delta || data.transcript || data.text;
-        if (chunk) appendToBox(responseBox, chunk);
+        if (chunk) {
+            appendToBox(responseBox, chunk, data.type);
+        }
         return;
     }
 
     // AI response final text
     if (data.type === 'response.output_text.done' && data.text) {
-        appendToBox(responseBox, data.text);
+        appendToBox(responseBox, data.text, data.type);
         return;
     }
 
@@ -277,10 +284,17 @@ function updateStatus(status, text) {
     statusIndicator.className = 'status-badge ' + status;
 }
 
-function appendToBox(box, text) {
+function appendToBox(box, text, eventType) {
+    if (appendedTexts.has(text)) {
+        console.log(`Duplicate text ignored from event ${eventType}: ${text}`);
+        return;
+    }
+
+    appendedTexts.add(text);
     if (box.querySelector('.placeholder')) box.innerHTML = '';
     box.textContent += text;
     box.scrollTop = box.scrollHeight;
+    console.log(`Appended text from event ${eventType}: ${text}`);
 }
 
 function addLog(message, type = 'info') {
