@@ -12,7 +12,7 @@ const transcriptBox = $('transcript');
 const responseBox = $('response');
 const logsBox = $('logs');
 
-const WS_URL = 'ws://localhost:8000/realtime';
+const WS_URL = 'ws://localhost:8080/realtime';
 
 recordBtn.addEventListener('click', toggleRecording);
 $('clearLogsBtn').addEventListener('click', (e) => {

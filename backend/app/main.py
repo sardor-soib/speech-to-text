@@ -38,3 +38,8 @@ app.include_router(ws_router, tags=["websocket"])
 async def root():
     return {"status": "ok", "message": "Speech-to-Text Backend API"}
 
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+
+

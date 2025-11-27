@@ -100,6 +100,9 @@ async def proxy_websocket(client_ws):
         logger.error(error_msg)
         try:
             await client_ws.send_json({"type": "error", "error": {"message": error_msg}})
+        except Exception:
+            pass
+        try:
             await client_ws.close(code=1008, reason="OpenAI connection timeout")
         except Exception:
             pass
@@ -108,6 +111,9 @@ async def proxy_websocket(client_ws):
         logger.error(f"{error_msg} - Check your API key and Realtime API access (model={OPENAI_REALTIME_MODEL})")
         try:
             await client_ws.send_json({"type": "error", "error": {"message": f"{error_msg}. Verify model '{OPENAI_REALTIME_MODEL}' exists and your key has access."}})
+        except Exception:
+            pass
+        try:
             await client_ws.close(code=1011, reason=f"OpenAI WebSocket error")
         except Exception:
             pass
@@ -116,6 +122,9 @@ async def proxy_websocket(client_ws):
         logger.exception(error_msg)
         try:
             await client_ws.send_json({"type": "error", "error": {"message": error_msg}})
+        except Exception:
+            pass
+        try:
             await client_ws.close(code=1011, reason="Internal server error")
         except Exception:
             pass
