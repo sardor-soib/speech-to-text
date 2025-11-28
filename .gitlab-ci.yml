@@ -67,7 +67,7 @@ deploy:backend:
         --min-instances 0 \
         --cpu 1 \
         --concurrency 80 \
-        --set-env-vars OPENAI_API_KEY=$OPENAI_API_KEY,PORT=8080
+        --set-env-vars OPENAI_API_KEY=$OPENAI_API_KEY
     - echo "Backend deployed at:"
     - gcloud run services describe speech-to-text-backend --region=us-central1 --format='value(status.url)'
   environment:
@@ -96,8 +96,7 @@ deploy:frontend:
         --max-instances 10 \
         --min-instances 0 \
         --cpu 1 \
-        --concurrency 80 \
-        --set-env-vars PORT=8080
+        --concurrency 80
     - echo "Frontend deployed at:"
     - gcloud run services describe speech-to-text-frontend --region=us-central1 --format='value(status.url)'
   environment:
