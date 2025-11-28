@@ -60,6 +60,10 @@ deploy:backend:
         --platform managed \
         --region us-central1 \
         --allow-unauthenticated \
+        --port 8080 \
+        --timeout 300 \
+        --memory 1Gi \
+        --max-instances 10 \
         --set-env-vars OPENAI_API_KEY=$OPENAI_API_KEY
   environment:
     name: production
@@ -80,7 +84,11 @@ deploy:frontend:
         --image $IMAGE_TAG_FRONTEND \
         --platform managed \
         --region us-central1 \
-        --allow-unauthenticated
+        --allow-unauthenticated \
+        --port 8080 \
+        --timeout 300 \
+        --memory 512Mi \
+        --max-instances 10
   environment:
     name: production
     url: https://speech-to-text-frontend-xxx.run.app
