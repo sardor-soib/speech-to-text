@@ -8,8 +8,8 @@
     "npm install": "npm ci",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "python -m http.server 3000",
-    "dev": "python -m http.server 3000"
+    "start": "vite preview --port 3000",
+    "dev": "vite --port 3000"
   },
   "devDependencies": {
     "vite": "^7.2.4"
