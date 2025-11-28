@@ -25,7 +25,7 @@ build:backend:
   stage: build
   image: google/cloud-sdk:slim
   script:
-    - printf '%s' "$GCP_SERVICE_KEY" > ${HOME}/gcp-key.json
+    - echo "$GCP_SERVICE_KEY" | base64 -d > ${HOME}/gcp-key.json
     - gcloud auth activate-service-account --key-file=${HOME}/gcp-key.json
     - gcloud config set project $GCP_PROJECT_ID
     - gcloud builds submit --tag $IMAGE_TAG_BACKEND backend
@@ -37,7 +37,7 @@ build:frontend:
   stage: build
   image: google/cloud-sdk:slim
   script:
-    - printf '%s' "$GCP_SERVICE_KEY" > ${HOME}/gcp-key.json
+    - echo "$GCP_SERVICE_KEY" | base64 -d > ${HOME}/gcp-key.json
     - gcloud auth activate-service-account --key-file=${HOME}/gcp-key.json
     - gcloud config set project $GCP_PROJECT_ID
     - gcloud builds submit --tag $IMAGE_TAG_FRONTEND frontend
@@ -49,7 +49,7 @@ deploy:backend:
   stage: deploy
   image: google/cloud-sdk:alpine
   script:
-    - printf '%s' "$GCP_SERVICE_KEY" > ${HOME}/gcp-key.json
+    - echo "$GCP_SERVICE_KEY" | base64 -d > ${HOME}/gcp-key.json
     - gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json
     - gcloud config set project $GCP_PROJECT_ID
     - |
@@ -70,7 +70,7 @@ deploy:frontend:
   stage: deploy
   image: google/cloud-sdk:alpine
   script:
-    - printf '%s' "$GCP_SERVICE_KEY" > ${HOME}/gcp-key.json
+    - echo "$GCP_SERVICE_KEY" | base64 -d > ${HOME}/gcp-key.json
     - gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json
     - gcloud config set project $GCP_PROJECT_ID
     - |
