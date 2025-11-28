@@ -64,10 +64,15 @@ deploy:backend:
         --timeout 300 \
         --memory 1Gi \
         --max-instances 10 \
-        --set-env-vars OPENAI_API_KEY=$OPENAI_API_KEY
+        --min-instances 0 \
+        --cpu 1 \
+        --concurrency 80 \
+        --set-env-vars OPENAI_API_KEY=$OPENAI_API_KEY,PORT=8080
+    - echo "Backend deployed at:"
+    - gcloud run services describe speech-to-text-backend --region=us-central1 --format='value(status.url)'
   environment:
     name: production
-    url: https://speech-to-text-backend-xxx.run.app
+    url: https://speech-to-text-backend-xxx-uc.a.run.app
   only:
     - main
 
@@ -88,9 +93,15 @@ deploy:frontend:
         --port 8080 \
         --timeout 300 \
         --memory 512Mi \
-        --max-instances 10
+        --max-instances 10 \
+        --min-instances 0 \
+        --cpu 1 \
+        --concurrency 80 \
+        --set-env-vars PORT=8080
+    - echo "Frontend deployed at:"
+    - gcloud run services describe speech-to-text-frontend --region=us-central1 --format='value(status.url)'
   environment:
     name: production
-    url: https://speech-to-text-frontend-xxx.run.app
+    url: https://speech-to-text-frontend-xxx-uc.a.run.app
   only:
     - main
