@@ -28,6 +28,7 @@ build:backend:
     - echo "$GCP_SERVICE_KEY" | base64 -d > ${HOME}/gcp-key.json
     - gcloud auth activate-service-account --key-file=${HOME}/gcp-key.json
     - gcloud config set project $GCP_PROJECT_ID
+    - gcloud services enable cloudbuild.googleapis.com
     - gcloud builds submit --tag $IMAGE_TAG_BACKEND backend
   only:
     - main
@@ -40,6 +41,7 @@ build:frontend:
     - echo "$GCP_SERVICE_KEY" | base64 -d > ${HOME}/gcp-key.json
     - gcloud auth activate-service-account --key-file=${HOME}/gcp-key.json
     - gcloud config set project $GCP_PROJECT_ID
+    - gcloud services enable cloudbuild.googleapis.com
     - gcloud builds submit --tag $IMAGE_TAG_FRONTEND frontend
   only:
     - main
