@@ -60,7 +60,6 @@ deploy:backend:
         --platform managed \
         --region us-central1 \
         --allow-unauthenticated \
-        --port 8080 \
         --timeout 300 \
         --memory 1Gi \
         --max-instances 10 \
@@ -90,7 +89,6 @@ deploy:frontend:
         --platform managed \
         --region us-central1 \
         --allow-unauthenticated \
-        --port 8080 \
         --timeout 300 \
         --memory 512Mi \
         --max-instances 10 \
