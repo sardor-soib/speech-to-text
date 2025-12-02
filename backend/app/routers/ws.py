@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.websocket("/realtime")
+@router.websocket("/ws")
 async def realtime_proxy(client_ws: WebSocket):
     try:
         await client_ws.accept()
