@@ -70,7 +70,7 @@ class TestWebSocketRouter:
     def test_websocket_route_registered(self):
         """Check that WebSocket route is registered"""
         route_paths = [route.path for route in app.routes]
-        assert "/realtime" in route_paths
+        assert "/ws" in route_paths
 
     def test_websocket_connection(self):
         """Check WebSocket connection capability"""
@@ -79,7 +79,7 @@ class TestWebSocketRouter:
         # Accept either an exception (when OpenAI service/key is unavailable)
         # or a successful handshake; the route must exist.
         try:
-            with client.websocket_connect("/realtime") as websocket:
+            with client.websocket_connect("/ws") as websocket:
                 # If connection succeeds, simply close it — test passes
                 pass
         except Exception:
