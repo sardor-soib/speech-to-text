@@ -14,7 +14,7 @@ const transcriptBox = $('transcript');
 const responseBox = $('response');
 const logsBox = $('logs');
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 const WS_URL = API_URL.replace(/^http/, 'ws') + '/ws';
 
 recordBtn.addEventListener('click', toggleRecording);
